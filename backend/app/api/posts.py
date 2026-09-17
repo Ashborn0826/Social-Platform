@@ -3,7 +3,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.deps import current_user
 from app.db.models import User
-from app.db.repository import PostRepository, UserRepository
+from app.db.repository import (
+    AttachmentRepository,
+    PostAttachmentRepository,
+    PostRepository,
+    UserRepository,
+)
 from app.db.session import get_session
 from app.schemas import (
     CreatePostRequest,
@@ -32,7 +37,39 @@ async def create_post(
     user: User = Depends(current_user),
 ) -> PostResponse:
     repo = PostRepository(session)
+
+    # Validate attachments before creating the post (atomic: if any attachment
+    # is invalid, we don't create a post and the user can fix their input)
+    attachment_ids = payload.attachment_ids or []
+    if attachment_ids:
+        # Dedupe (preserving order) — same attachment listed twice = one link
+        seen: set[int] = set()
+        deduped: list[int] = []
+        for aid in attachment_ids:
+            if aid not in seen:
+                seen.add(aid)
+                deduped.append(aid)
+        attachment_ids = deduped
+
+        att_repo = AttachmentRepository(session)
+        for aid in attachment_ids:
+            att = await att_repo.get_by_id(aid)
+            # 404 for both "doesn't exist" and "exists but not yours" — don't leak existence
+            if att is None or att.owner_id != user.id:
+                raise HTTPException(status_code=403, detail="attachment_not_accessible") from None
+            if att.status != "ready":
+                raise HTTPException(
+                    status_code=409, detail="attachment_not_ready"
+                ) from None
+
     post = await repo.create(author_id=user.id, text=payload.text)
+
+    # Link attachments (positional)
+    pa_repo = PostAttachmentRepository(session)
+    for position, aid in enumerate(attachment_ids):
+        await pa_repo.attach(post_id=post.id, attachment_id=aid, position=position)
+    await session.commit()
+
     return PostResponse(
         id=post.id,
         author_id=post.author_id,

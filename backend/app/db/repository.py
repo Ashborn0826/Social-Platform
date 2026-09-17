@@ -1,10 +1,11 @@
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import Post, User
+from app.db.models import Attachment, Post, PostAttachment, User
 
 
 class EmailAlreadyExistsError(Exception):
@@ -82,3 +83,53 @@ class PostRepository:
             query = query.where(Post.id < before)
         result = await self.session.execute(query)
         return list(result.scalars().all())
+
+
+class AttachmentRepository:
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def create(
+        self,
+        owner_id: int,
+        content_type: str,
+        size_bytes: int,
+        storage_key: str,
+    ) -> Attachment:
+        att = Attachment(
+            owner_id=owner_id,
+            content_type=content_type,
+            size_bytes=size_bytes,
+            storage_key=storage_key,
+            status="pending",
+        )
+        self.session.add(att)
+        await self.session.commit()
+        await self.session.refresh(att)
+        return att
+
+    async def get_by_id(self, attachment_id: int) -> Attachment | None:
+        result = await self.session.execute(
+            select(Attachment).where(Attachment.id == attachment_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def mark_ready(self, attachment_id: int) -> None:
+        att = await self.get_by_id(attachment_id)
+        if att is None:
+            return
+        att.status = "ready"
+        att.completed_at = datetime.now(timezone.utc)
+        await self.session.commit()
+
+
+class PostAttachmentRepository:
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def attach(self, post_id: int, attachment_id: int, position: int = 0) -> None:
+        pa = PostAttachment(
+            post_id=post_id, attachment_id=attachment_id, position=position
+        )
+        self.session.add(pa)
+        await self.session.flush()

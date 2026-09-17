@@ -13,18 +13,18 @@
 
 ## 2. Phase 2 — Media upload pipeline (presigned URLs, S3/FS abstraction)
 
-- [ ] 2.1 Add media deps to pyproject: `boto3`, `pillow`, `python-multipart`, `moto[s3]` (dev) and verify install succeeds
-- [ ] 2.2 Implement `backend/app/storage/base.py` with the `ObjectStorage` Protocol (presigned_put_url, presigned_get_url, exists, size, delete, put_bytes, get_bytes) and verify it imports cleanly
-- [ ] 2.3 Implement `backend/app/storage/local.py` with `LocalBackend` (filesystem under `settings.local_storage_dir`) — returns presigned URLs as `/api/uploads/local/{key}?expires=...&sig=...` and verify unit tests cover put/get/exists/size/delete round-trip
-- [ ] 2.4 Implement `backend/app/storage/s3.py` with `S3Backend` using boto3 (uses `generate_presigned_url`) and verify against moto in tests
-- [ ] 2.5 Add `backend/app/storage/factory.py` `get_storage() -> ObjectStorage` (lru_cache, reads `settings.object_storage_backend`) and verify integration test that switching env var changes backend
-- [ ] 2.6 Add Attachment SQLAlchemy model (id, owner_id, content_type, size_bytes, storage_key UNIQUE, thumbnail_key, status with default 'pending', created_at, completed_at) + Alembic migration and verify upgrade succeeds
-- [ ] 2.7 Implement `POST /api/uploads` (auth, validates content_type in image/*|video/*, size_bytes ≤ 50MB) returning `{upload_url, attachment_id, storage_key, expires_at}` and verify integration tests cover happy path + content-type rejection + size rejection
-- [ ] 2.8 Implement `POST /api/uploads/{id}/complete` (auth, ownership check) that verifies object exists in storage + size > 0, transitions to status='ready', and verify integration tests cover success + object-not-found 409
-- [ ] 2.9 Implement `GET /api/uploads/{id}` with ownership check (404 for non-owners — don't leak existence) and verify integration tests cover owner + non-owner paths
-- [ ] 2.10 Add a local-storage download route at `GET /api/uploads/local/{key}?sig=...&expires=...` (only for LocalBackend) and verify it serves the uploaded bytes
-- [ ] 2.11 Cross-spec validation: extend `POST /api/posts` to accept `attachment_ids` and reject (a) attachments from other users with 403, (b) attachments not in `ready` status with 409 and verify integration tests cover both
-- [ ] 2.12 Phase 2 verification: `pytest -q` all green, end-to-end test "upload a JPEG to local backend, complete, attach to post" passes; write `notes/phase-2-explanation.md` AND `notes/phase-2-teaching.md` (zero-knowledge tutorial covering presigned URLs, S3 SDK, content-type validation, multipart upload, why client uploads directly)
+- [x] 2.1 Add media deps to pyproject: `boto3`, `pillow`, `python-multipart`, `moto[s3]` (dev) and verify install succeeds
+- [x] 2.2 Implement `backend/app/storage/base.py` with the `ObjectStorage` Protocol (presigned_put_url, presigned_get_url, exists, size, delete, put_bytes, get_bytes) and verify it imports cleanly
+- [x] 2.3 Implement `backend/app/storage/local.py` with `LocalBackend` (filesystem under `settings.local_storage_dir`) — returns presigned URLs as `/api/uploads/local/{key}?expires=...&sig=...` and verify unit tests cover put/get/exists/size/delete round-trip
+- [x] 2.4 Implement `backend/app/storage/s3.py` with `S3Backend` using boto3 (uses `generate_presigned_url`) and verify against moto in tests
+- [x] 2.5 Add `backend/app/storage/factory.py` `get_storage() -> ObjectStorage` (lru_cache, reads `settings.object_storage_backend`) and verify integration test that switching env var changes backend
+- [x] 2.6 Add Attachment SQLAlchemy model (id, owner_id, content_type, size_bytes, storage_key UNIQUE, thumbnail_key, status with default 'pending', created_at, completed_at) + Alembic migration and verify upgrade succeeds
+- [x] 2.7 Implement `POST /api/uploads` (auth, validates content_type in image/*|video/*, size_bytes ≤ 50MB) returning `{upload_url, attachment_id, storage_key, expires_at}` and verify integration tests cover happy path + content-type rejection + size rejection
+- [x] 2.8 Implement `POST /api/uploads/{id}/complete` (auth, ownership check) that verifies object exists in storage + size > 0, transitions to status='ready', and verify integration tests cover success + object-not-found 409
+- [x] 2.9 Implement `GET /api/uploads/{id}` with ownership check (404 for non-owners — don't leak existence) and verify integration tests cover owner + non-owner paths
+- [x] 2.10 Add a local-storage download route at `GET /api/uploads/local/{key}?sig=...&expires=...` (only for LocalBackend) and verify it serves the uploaded bytes
+- [x] 2.11 Cross-spec validation: extend `POST /api/posts` to accept `attachment_ids` and reject (a) attachments from other users with 403, (b) attachments not in `ready` status with 409 and verify integration tests cover both
+- [x] 2.12 Phase 2 verification: `pytest -q` all green, end-to-end test "upload a JPEG to local backend, complete, attach to post" passes; write `notes/phase-2-explanation.md` AND `notes/phase-2-teaching.md` (zero-knowledge tutorial covering presigned URLs, S3 SDK, content-type validation, multipart upload, why client uploads directly)
 
 ## 3. Phase 3 — Feed with fan-out on write
 

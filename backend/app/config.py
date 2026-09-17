@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     s3_bucket: str = "social-media"
     s3_endpoint_url: str | None = None
     s3_region: str = "us-east-1"
+    api_host: str = "http://localhost:8000"
+    storage_secret: str = "dev-storage-secret-change-in-prod"
 
     frontend_origin: str = "http://localhost:5173"
     debug: bool = False

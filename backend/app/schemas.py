@@ -35,6 +35,7 @@ class TokenResponse(BaseModel):
 
 class CreatePostRequest(BaseModel):
     text: str = Field(min_length=1, max_length=2000)
+    attachment_ids: Optional[list[int]] = None
 
     @field_validator("text")
     @classmethod
@@ -64,3 +65,32 @@ class PostListItem(BaseModel):
 class PostListResponse(BaseModel):
     posts: list[PostListItem]
     next_cursor: Optional[int] = None
+
+
+class AttachmentResponse(BaseModel):
+    id: int
+    owner_id: int
+    content_type: str
+    size_bytes: int
+    storage_key: str
+    thumbnail_key: Optional[str] = None
+    status: str
+    created_at: datetime
+    completed_at: Optional[datetime] = None
+
+
+class PresignedUploadRequest(BaseModel):
+    content_type: str = Field(..., pattern=r"^(image|video)/[\w.+-]+$")
+    size_bytes: int = Field(..., gt=0, le=50_000_000)
+
+
+class PresignedUploadResponse(BaseModel):
+    upload_url: str
+    attachment_id: int
+    storage_key: str
+    expires_at: datetime
+
+
+class CompleteUploadResponse(BaseModel):
+    attachment_id: int
+    status: str

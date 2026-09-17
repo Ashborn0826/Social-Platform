@@ -11,6 +11,10 @@ _test_db_path = os.path.join(tempfile.gettempdir(), "social_platform_test.db")
 os.environ.setdefault("DATABASE_URL", f"sqlite+aiosqlite:///{_test_db_path}")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 os.environ.setdefault("JWT_SECRET", "test-secret-do-not-use-in-prod")
+os.environ.setdefault("API_HOST", "http://test")
+os.environ.setdefault("STORAGE_SECRET", "test-storage-secret")
+os.environ.setdefault("OBJECT_STORAGE_BACKEND", "local")
+os.environ.setdefault("LOCAL_STORAGE_DIR", tempfile.gettempdir() + "/social-storage-test")
 
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
@@ -19,6 +23,8 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from app.db.models import Base
 from app.db.session import get_session
 from app.main import create_app
+from app.storage.factory import get_storage
+from app.storage.local import LocalBackend
 
 
 @pytest_asyncio.fixture
@@ -40,7 +46,18 @@ async def db_setup(monkeypatch):
 
 
 @pytest_asyncio.fixture
-async def app(db_setup):
+async def storage(tmp_path):
+    """Fresh LocalBackend rooted at a per-test tmp dir."""
+    b = LocalBackend(
+        base_dir=str(tmp_path / "storage"),
+        api_base_url="http://test",
+        secret="test-storage-secret",
+    )
+    return b
+
+
+@pytest_asyncio.fixture
+async def app(db_setup, storage):
     TestSessionLocal = async_sessionmaker(db_setup, expire_on_commit=False)
 
     async def _override_session():
@@ -49,6 +66,7 @@ async def app(db_setup):
 
     application = create_app()
     application.dependency_overrides[get_session] = _override_session
+    application.dependency_overrides[get_storage] = lambda: storage
     yield application
 
 
