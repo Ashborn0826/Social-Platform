@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, posts, uploads
+from app.api import auth, feed, posts, uploads
 from app.config import settings
 
 
@@ -27,6 +27,7 @@ def create_app() -> FastAPI:
         return {"status": "ok"}
 
     app.include_router(auth.router)
+    app.include_router(feed.router)
     app.include_router(posts.router)
     app.include_router(uploads.router)
     app.include_router(uploads.local_router)

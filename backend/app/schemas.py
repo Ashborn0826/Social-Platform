@@ -94,3 +94,28 @@ class PresignedUploadResponse(BaseModel):
 class CompleteUploadResponse(BaseModel):
     attachment_id: int
     status: str
+
+
+class FeedAttachment(BaseModel):
+    id: int
+    content_type: str
+    url: str
+    thumbnail_url: str | None = None
+
+
+class FeedPostAuthor(BaseModel):
+    id: int
+    display_name: str
+
+
+class FeedPostItem(BaseModel):
+    id: int
+    text: str
+    created_at: datetime
+    author: FeedPostAuthor
+    attachments: list[FeedAttachment]
+
+
+class FeedResponse(BaseModel):
+    posts: list[FeedPostItem]
+    next_cursor: int | None = None

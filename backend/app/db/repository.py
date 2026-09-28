@@ -5,7 +5,14 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import Attachment, Post, PostAttachment, User
+from app.db.models import (
+    Attachment,
+    Follow,
+    Post,
+    PostAttachment,
+    TimelineEntry,
+    User,
+)
 
 
 class EmailAlreadyExistsError(Exception):
@@ -133,3 +140,85 @@ class PostAttachmentRepository:
         )
         self.session.add(pa)
         await self.session.flush()
+
+
+class AlreadyFollowingError(Exception):
+    """Raised when follow() is called for an existing follow."""
+
+
+class NotFollowingError(Exception):
+    """Raised when unfollow() is called but the user is not following."""
+
+
+class FollowRepository:
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def follow(self, follower_id: int, followee_id: int) -> Follow:
+        f = Follow(follower_id=follower_id, followee_id=followee_id)
+        self.session.add(f)
+        try:
+            await self.session.commit()
+        except IntegrityError:
+            await self.session.rollback()
+            raise AlreadyFollowingError() from None
+        await self.session.refresh(f)
+        return f
+
+    async def unfollow(self, follower_id: int, followee_id: int) -> bool:
+        result = await self.session.execute(
+            select(Follow).where(
+                Follow.follower_id == follower_id, Follow.followee_id == followee_id
+            )
+        )
+        f = result.scalar_one_or_none()
+        if f is None:
+            raise NotFollowingError() from None
+        await self.session.delete(f)
+        await self.session.commit()
+        return True
+
+    async def is_following(self, follower_id: int, followee_id: int) -> bool:
+        result = await self.session.execute(
+            select(Follow.follower_id).where(
+                Follow.follower_id == follower_id, Follow.followee_id == followee_id
+            )
+        )
+        return result.scalar_one_or_none() is not None
+
+    async def list_follower_ids_of(self, user_id: int) -> list[int]:
+        """Return the IDs of users who follow `user_id`."""
+        result = await self.session.execute(
+            select(Follow.follower_id).where(Follow.followee_id == user_id)
+        )
+        return [row[0] for row in result.all()]
+
+
+class TimelineRepository:
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def insert_many(self, user_ids: list[int], post_id: int) -> None:
+        """Bulk insert timeline entries. The (user_id, post_id) PK prevents dupes."""
+        if not user_ids:
+            return
+        from sqlalchemy import insert
+
+        await self.session.execute(
+            insert(TimelineEntry),
+            [{"user_id": uid, "post_id": post_id} for uid in user_ids],
+        )
+
+    async def list_post_ids_for_user(
+        self, user_id: int, limit: int, before: Optional[int] = None
+    ) -> list[int]:
+        query = (
+            select(TimelineEntry.post_id)
+            .where(TimelineEntry.user_id == user_id)
+            .order_by(TimelineEntry.post_id.desc())
+            .limit(limit)
+        )
+        if before is not None:
+            query = query.where(TimelineEntry.post_id < before)
+        result = await self.session.execute(query)
+        return [row[0] for row in result.all()]

@@ -2,7 +2,8 @@
 
 Uses a temp-file SQLite so multiple engines can share data (we override
 the global engine + AsyncSessionLocal via monkey-patch so app code +
-persist-style helpers all read/write through the same database).
+persist-style helpers all read/write through the same database). Also
+overrides the Redis dependency with fakeredis so tests run without Redis.
 """
 import os
 import tempfile
@@ -17,9 +18,11 @@ os.environ.setdefault("OBJECT_STORAGE_BACKEND", "local")
 os.environ.setdefault("LOCAL_STORAGE_DIR", tempfile.gettempdir() + "/social-storage-test")
 
 import pytest_asyncio
+from fakeredis import aioredis as fakeredis_aio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
+from app.cache.redis_client import get_redis
 from app.db.models import Base
 from app.db.session import get_session
 from app.main import create_app
@@ -46,6 +49,14 @@ async def db_setup(monkeypatch):
 
 
 @pytest_asyncio.fixture
+async def redis_client():
+    """Per-test fakeredis instance (no shared state across tests)."""
+    client = fakeredis_aio.FakeRedis(decode_responses=True)
+    yield client
+    await client.aclose()
+
+
+@pytest_asyncio.fixture
 async def storage(tmp_path):
     """Fresh LocalBackend rooted at a per-test tmp dir."""
     b = LocalBackend(
@@ -57,7 +68,7 @@ async def storage(tmp_path):
 
 
 @pytest_asyncio.fixture
-async def app(db_setup, storage):
+async def app(db_setup, redis_client, storage):
     TestSessionLocal = async_sessionmaker(db_setup, expire_on_commit=False)
 
     async def _override_session():
@@ -66,6 +77,7 @@ async def app(db_setup, storage):
 
     application = create_app()
     application.dependency_overrides[get_session] = _override_session
+    application.dependency_overrides[get_redis] = lambda: redis_client
     application.dependency_overrides[get_storage] = lambda: storage
     yield application
 

@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.deps import current_user
+from app.cache.redis_client import get_redis
 from app.db.models import User
 from app.db.repository import (
     AttachmentRepository,
@@ -10,6 +12,7 @@ from app.db.repository import (
     UserRepository,
 )
 from app.db.session import get_session
+from app.feed.service import FeedService
 from app.schemas import (
     CreatePostRequest,
     PostListItem,
@@ -34,6 +37,7 @@ def _user_response(user: User) -> UserResponse:
 async def create_post(
     payload: CreatePostRequest,
     session: AsyncSession = Depends(get_session),
+    redis: Redis = Depends(get_redis),
     user: User = Depends(current_user),
 ) -> PostResponse:
     repo = PostRepository(session)
@@ -68,6 +72,11 @@ async def create_post(
     pa_repo = PostAttachmentRepository(session)
     for position, aid in enumerate(attachment_ids):
         await pa_repo.attach(post_id=post.id, attachment_id=aid, position=position)
+
+    # Fan-out: append the post id to every follower's timeline (Redis + Postgres)
+    feed_service = FeedService(session, redis)
+    await feed_service.fan_out_post(post_id=post.id, author_id=user.id)
+
     await session.commit()
 
     return PostResponse(

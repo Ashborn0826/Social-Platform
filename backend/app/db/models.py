@@ -98,3 +98,45 @@ class PostAttachment(Base):
         primary_key=True,
     )
     position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
+class Follow(Base):
+    __tablename__ = "follows"
+
+    follower_id: Mapped[int] = mapped_column(
+        BigInteger,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    followee_id: Mapped[int] = mapped_column(
+        BigInteger,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (Index("follows_followee_idx", "followee_id"),)
+
+
+class TimelineEntry(Base):
+    __tablename__ = "timeline_entries"
+
+    user_id: Mapped[int] = mapped_column(
+        BigInteger,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    post_id: Mapped[int] = mapped_column(
+        BigInteger,
+        ForeignKey("posts.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    inserted_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        Index("timeline_user_idx", "user_id", "inserted_at"),
+    )

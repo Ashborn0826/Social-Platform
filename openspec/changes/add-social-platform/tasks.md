@@ -28,13 +28,13 @@
 
 ## 3. Phase 3 — Feed with fan-out on write
 
-- [ ] 3.1 Add follow model (`follower_id`, `followee_id`, `created_at`, composite PK) + timeline_entries model (`user_id`, `post_id`, `inserted_at`, composite PK) + Alembic migration and verify upgrade succeeds
-- [ ] 3.2 Implement `POST /api/users/{id}/follow` (auth, blocks self-follow, 409 on duplicate) + `DELETE /api/users/{id}/follow` (auth, 404 if not following) and verify integration tests cover all paths
-- [ ] 3.3 Implement `FollowRepository.follow(follower_id, followee_id)`, `unfollow`, `list_follower_ids_of(user_id) -> list[int]` and verify unit tests
-- [ ] 3.4 Implement fan-out: extend `POST /api/posts` to (a) insert post, (b) fetch follower ids, (c) bulk INSERT into timeline_entries, (d) ZADD into Redis sorted set `feed:{user_id}` for each follower; verify integration test "create post with 5 followers -> 5 timeline rows + 5 Redis zset entries"
-- [ ] 3.5 Implement `GET /api/feed?limit=&before=` that reads from Redis sorted set first, falls through to Postgres timeline_entries on miss, hydrates each post with author + attachment presigned-URLs, and verify integration tests cover populated feed + empty feed + cache-miss fallback
-- [ ] 3.6 Implement feed eviction: when a post is deleted (admin only, future work) or a user unfollows, the unfollowed user's posts from before the unfollow remain (documented in spec — historical posts not retroactively removed); verify there's a test that documents this behavior
-- [ ] 3.7 Phase 3 verification: `pytest -q` all green, end-to-end "user A follows B, B posts, A's feed contains B's post"; write `notes/phase-3-explanation.md` AND `notes/phase-3-teaching.md` (zero-knowledge tutorial covering follow graphs, fan-out on write vs read, write amplification, sorted sets, cursor pagination)
+- [x] 3.1 Add follow model (`follower_id`, `followee_id`, `created_at`, composite PK) + timeline_entries model (`user_id`, `post_id`, `inserted_at`, composite PK) + Alembic migration and verify upgrade succeeds
+- [x] 3.2 Implement `POST /api/users/{id}/follow` (auth, blocks self-follow, 409 on duplicate) + `DELETE /api/users/{id}/follow` (auth, 404 if not following) and verify integration tests cover all paths
+- [x] 3.3 Implement `FollowRepository.follow(follower_id, followee_id)`, `unfollow`, `list_follower_ids_of(user_id) -> list[int]` and verify unit tests
+- [x] 3.4 Implement fan-out: extend `POST /api/posts` to (a) insert post, (b) fetch follower ids, (c) bulk INSERT into timeline_entries, (d) ZADD into Redis sorted set `feed:{user_id}` for each follower; verify integration test "create post with 5 followers -> 5 timeline rows + 5 Redis zset entries"
+- [x] 3.5 Implement `GET /api/feed?limit=&before=` that reads from Redis sorted set first, falls through to Postgres timeline_entries on miss, hydrates each post with author + attachment presigned-URLs, and verify integration tests cover populated feed + empty feed + cache-miss fallback
+- [x] 3.6 Implement feed eviction: when a post is deleted (admin only, future work) or a user unfollows, the unfollowed user's posts from before the unfollow remain (documented in spec — historical posts not retroactively removed); verify there's a test that documents this behavior
+- [x] 3.7 Phase 3 verification: `pytest -q` all green, end-to-end "user A follows B, B posts, A's feed contains B's post"; write `notes/phase-3-explanation.md` AND `notes/phase-3-teaching.md` (zero-knowledge tutorial covering follow graphs, fan-out on write vs read, write amplification, sorted sets, cursor pagination)
 
 ## 4. Phase 4 — WebSocket gateway + 1-on-1 chat with Redis pub/sub
 
