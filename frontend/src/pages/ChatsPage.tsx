@@ -1,6 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ApiError, api, chatWebSocket, type Chat, type Message } from '../api'
+import {
+  ApiError,
+  api,
+  chatWebSocket,
+  clearAuth,
+  getUserId,
+  type Chat,
+  type Message,
+} from '../api'
 
 export default function ChatsPage() {
   const { chatId: chatIdParam } = useParams()
@@ -48,8 +56,17 @@ export default function ChatsPage() {
     wsRef.current = ws
     setWsStatus('connecting')
     ws.onopen = () => setWsStatus('open')
-    ws.onclose = () => setWsStatus('closed')
     ws.onerror = () => setWsStatus('closed')
+    ws.onclose = (event) => {
+      setWsStatus('closed')
+      // 4401 is our custom auth-failure close code (set by the server when
+      // the JWT is missing or invalid). Other close codes (1000 normal,
+      // 1006 abnormal closure) are not auth failures — don't log out.
+      if (event.code === 4401) {
+        clearAuth()
+        nav('/login')
+      }
+    }
     ws.onmessage = (ev) => {
       try {
         const data = JSON.parse(ev.data)
@@ -115,6 +132,7 @@ export default function ChatsPage() {
   }
 
   const activeChat = chats.find((c) => c.chat_id === chatId)
+  const myUserId = getUserId()
 
   return (
     <div className="chats-page">
@@ -163,12 +181,25 @@ export default function ChatsPage() {
               {messages.length === 0 ? (
                 <div className="empty">No messages yet.</div>
               ) : (
-                messages.map((m) => (
-                  <div key={m.id} className="message">
-                    <p>{m.text}</p>
-                    <time>{new Date(m.created_at).toLocaleTimeString()}</time>
-                  </div>
-                ))
+                messages.map((m) => {
+                  const mine = myUserId === m.sender_id
+                  return (
+                    <div
+                      key={m.id}
+                      className={`message${mine ? ' mine' : ''}`}
+                    >
+                      {!mine && activeChat && (
+                        <div className="message-sender">
+                          {activeChat.peer.display_name}
+                        </div>
+                      )}
+                      <p>{m.text}</p>
+                      <time>
+                        {new Date(m.created_at).toLocaleTimeString()}
+                      </time>
+                    </div>
+                  )
+                })
               )}
               <div ref={messagesEndRef} />
             </div>
