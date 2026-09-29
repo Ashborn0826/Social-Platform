@@ -18,7 +18,7 @@ from app.schemas import (
     UserResponse,
 )
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
 def _user_response(user) -> UserResponse:
