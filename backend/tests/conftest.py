@@ -17,6 +17,7 @@ os.environ.setdefault("STORAGE_SECRET", "test-storage-secret")
 os.environ.setdefault("OBJECT_STORAGE_BACKEND", "local")
 os.environ.setdefault("LOCAL_STORAGE_DIR", tempfile.gettempdir() + "/social-storage-test")
 
+import pytest
 import pytest_asyncio
 from fakeredis import aioredis as fakeredis_aio
 from httpx import ASGITransport, AsyncClient
@@ -53,7 +54,10 @@ async def redis_client():
     """Per-test fakeredis instance (no shared state across tests)."""
     client = fakeredis_aio.FakeRedis(decode_responses=True)
     yield client
-    await client.aclose()
+    # Don't close here — the lifespan will close it (and it must be open
+    # while the lifespan runs). TestClient teardown will trigger lifespan
+    # shutdown which closes it.
+    # await client.aclose()  # see comment above
 
 
 @pytest_asyncio.fixture
@@ -69,6 +73,12 @@ async def storage(tmp_path):
 
 @pytest_asyncio.fixture
 async def app(db_setup, redis_client, storage):
+    """FastAPI app per test with get_session / get_redis / get_storage overridden.
+
+    Pre-seeds `app.state.redis` with the test's fakeredis instance BEFORE
+    the lifespan runs (via TestClient). The lifespan sees it and reuses it
+    instead of creating a new one.
+    """
     TestSessionLocal = async_sessionmaker(db_setup, expire_on_commit=False)
 
     async def _override_session():
@@ -79,11 +89,17 @@ async def app(db_setup, redis_client, storage):
     application.dependency_overrides[get_session] = _override_session
     application.dependency_overrides[get_redis] = lambda: redis_client
     application.dependency_overrides[get_storage] = lambda: storage
+
+    # Tell the lifespan "the test owns this redis; don't close it on shutdown".
+    application.state.redis = redis_client
+    application.state.redis_owned_by_test = True
+
     yield application
 
 
 @pytest_asyncio.fixture
 async def client(app):
+    """Async httpx client for HTTP tests."""
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
     ) as c:
@@ -95,3 +111,16 @@ async def session(db_setup):
     SessionLocal = async_sessionmaker(db_setup, expire_on_commit=False)
     async with SessionLocal() as session:
         yield session
+
+
+@pytest.fixture
+def sync_client(app):
+    """Sync TestClient for WebSocket tests.
+
+    Wraps the app in TestClient which manages the lifespan (starts the chat
+    subscriber task on a real event loop).
+    """
+    from fastapi.testclient import TestClient
+
+    with TestClient(app) as c:
+        yield c

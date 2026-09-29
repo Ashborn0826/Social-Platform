@@ -119,3 +119,34 @@ class FeedPostItem(BaseModel):
 class FeedResponse(BaseModel):
     posts: list[FeedPostItem]
     next_cursor: int | None = None
+
+
+class CreateChatResponse(BaseModel):
+    chat_id: int
+
+
+class ChatPeerInfo(BaseModel):
+    id: int
+    display_name: str
+
+
+class MessageInfo(BaseModel):
+    id: int
+    chat_id: int
+    sender_id: int
+    text: str
+    created_at: datetime
+
+
+class ChatSummary(BaseModel):
+    chat_id: int
+    peer: ChatPeerInfo
+    last_message: Optional[MessageInfo] = None
+
+
+class ChatListResponse(BaseModel):
+    chats: list[ChatSummary]
+
+
+class ChatHistoryResponse(BaseModel):
+    messages: list[MessageInfo]

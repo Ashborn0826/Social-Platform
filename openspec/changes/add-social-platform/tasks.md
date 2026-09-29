@@ -38,15 +38,15 @@
 
 ## 4. Phase 4 — WebSocket gateway + 1-on-1 chat with Redis pub/sub
 
-- [ ] 4.1 Add websockets to deps (`fastapi[standard]` includes it, or `pip install websockets`) and verify install succeeds
-- [ ] 4.2 Add Chat (id, created_at), ChatParticipant (chat_id, user_id composite PK), Message (id, chat_id, sender_id, text, created_at) models + Alembic migration and verify upgrade succeeds
-- [ ] 4.3 Implement `POST /api/chats/{peer_user_id}` (auth, lazily creates chat) — or accept `to_user_id` field — for the lazy-create scenario and verify integration test
-- [ ] 4.4 Implement `GET /api/chats` returning `{chats: [{chat_id, peer, last_message, unread}, ...]}` and verify integration test with no chats + 2 chats
-- [ ] 4.5 Implement `GET /api/chats/{id}/messages?limit=&before=` with participant check (403 for non-participants) and verify integration tests
-- [ ] 4.6 Implement `backend/app/realtime/connection_manager.py` with `register(user_id, ws)`, `unregister(user_id, ws)`, `send_to_user(user_id, payload)` that finds all local connections for a user and sends — verify unit tests with mocked WebSockets
-- [ ] 4.7 Implement WebSocket endpoint `WS /api/chats/ws?token=<jwt>` that (a) authenticates, (b) registers connection, (c) starts Redis subscriber task, (d) handles incoming `send` messages by persisting + publishing to `chat:room:{chat_id}`, (e) cleans up on disconnect; verify integration test with TestClient or websocket client
-- [ ] 4.8 Implement Redis pub/sub subscriber: on receiving a message from `chat:room:{chat_id}`, iterate the local connection registry and forward to matching WebSockets; verify integration test with two simulated workers (sharing Redis, separate connection managers)
-- [ ] 4.9 Phase 4 verification: `pytest -q` all green, end-to-end test "two clients on simulated separate workers exchange messages in real time"; write `notes/phase-4-explanation.md` AND `notes/phase-4-teaching.md` (zero-knowledge tutorial covering WebSockets vs HTTP, connection state, pub/sub, channels, message persistence, optimistic send)
+- [x] 4.1 Add websockets to deps (`fastapi[standard]` includes it, or `pip install websockets`) and verify install succeeds
+- [x] 4.2 Add Chat (id, created_at), ChatParticipant (chat_id, user_id composite PK), Message (id, chat_id, sender_id, text, created_at) models + Alembic migration and verify upgrade succeeds
+- [x] 4.3 Implement `POST /api/chats/{peer_user_id}` (auth, lazily creates chat) — or accept `to_user_id` field — for the lazy-create scenario and verify integration test
+- [x] 4.4 Implement `GET /api/chats` returning `{chats: [{chat_id, peer, last_message, unread}, ...]}` and verify integration test with no chats + 2 chats
+- [x] 4.5 Implement `GET /api/chats/{id}/messages?limit=&before=` with participant check (403 for non-participants) and verify integration tests
+- [x] 4.6 Implement `backend/app/realtime/connection_manager.py` with `register(user_id, ws)`, `unregister(user_id, ws)`, `send_to_user(user_id, payload)` that finds all local connections for a user and sends — verify unit tests with mocked WebSockets
+- [x] 4.7 Implement WebSocket endpoint `WS /api/chats/ws?token=<jwt>` that (a) authenticates, (b) registers connection, (c) starts Redis subscriber task, (d) handles incoming `send` messages by persisting + publishing to `chat:room:{chat_id}`, (e) cleans up on disconnect; verify integration test with TestClient or websocket client
+- [x] 4.8 Implement Redis pub/sub subscriber: on receiving a message from `chat:room:{chat_id}`, iterate the local connection registry and forward to matching WebSockets; verify integration test with two simulated workers (sharing Redis, separate connection managers)
+- [x] 4.9 Phase 4 verification: `pytest -q` all green, end-to-end test "two clients on simulated separate workers exchange messages in real time"; write `notes/phase-4-explanation.md` AND `notes/phase-4-teaching.md` (zero-knowledge tutorial covering WebSockets vs HTTP, connection state, pub/sub, channels, message persistence, optimistic send)
 
 ## 5. Phase 5 — Background media processing worker (thumbnails)
 
