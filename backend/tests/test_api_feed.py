@@ -4,7 +4,7 @@ import pytest
 
 async def _signup_token(client, email: str) -> str:
     r = await client.post(
-        "/auth/signup",
+        "/api/auth/signup",
         json={"email": email, "password": "CorrectHorse9", "display_name": email.split("@")[0]},
     )
     return r.json()["access_token"]
@@ -16,7 +16,7 @@ def _auth(token: str) -> dict[str, str]:
 
 async def _user_id(client, token: str) -> int:
     me = await client.post(
-        "/auth/login",
+        "/api/auth/login",
         json={"email": "alice@example.com", "password": "CorrectHorse9"},
     )
     return me.json()["user"]["id"]
@@ -26,7 +26,7 @@ async def test_follow_user_success(client):
     alice = await _signup_token(client, "alice@example.com")
     bob = await _signup_token(client, "bob@example.com")
 
-    bob_id = (await client.post("/auth/login", json={
+    bob_id = (await client.post("/api/auth/login", json={
         "email": "bob@example.com", "password": "CorrectHorse9"
     })).json()["user"]["id"]
 
@@ -36,7 +36,7 @@ async def test_follow_user_success(client):
 
 async def test_self_follow_returns_400(client):
     alice = await _signup_token(client, "alice@example.com")
-    me = (await client.post("/auth/login", json={
+    me = (await client.post("/api/auth/login", json={
         "email": "alice@example.com", "password": "CorrectHorse9"
     })).json()["user"]["id"]
 
@@ -54,7 +54,7 @@ async def test_follow_unknown_user_returns_404(client):
 async def test_follow_already_following_returns_409(client):
     alice = await _signup_token(client, "alice@example.com")
     await _signup_token(client, "bob@example.com")
-    bob_id_val = (await client.post("/auth/login", json={
+    bob_id_val = (await client.post("/api/auth/login", json={
         "email": "bob@example.com", "password": "CorrectHorse9"
     })).json()["user"]["id"]
 
@@ -72,7 +72,7 @@ async def test_follow_requires_auth(client):
 async def test_unfollow_user_success(client):
     alice = await _signup_token(client, "alice@example.com")
     await _signup_token(client, "bob@example.com")
-    bob_id_val = (await client.post("/auth/login", json={
+    bob_id_val = (await client.post("/api/auth/login", json={
         "email": "bob@example.com", "password": "CorrectHorse9"
     })).json()["user"]["id"]
 
@@ -84,7 +84,7 @@ async def test_unfollow_user_success(client):
 async def test_unfollow_not_following_returns_404(client):
     alice = await _signup_token(client, "alice@example.com")
     await _signup_token(client, "bob@example.com")
-    bob_id_val = (await client.post("/auth/login", json={
+    bob_id_val = (await client.post("/api/auth/login", json={
         "email": "bob@example.com", "password": "CorrectHorse9"
     })).json()["user"]["id"]
 
@@ -95,7 +95,7 @@ async def test_unfollow_not_following_returns_404(client):
 async def test_feed_contains_post_from_followed_user(client, storage):
     alice = await _signup_token(client, "alice@example.com")
     bob = await _signup_token(client, "bob@example.com")
-    bob_id_val = (await client.post("/auth/login", json={
+    bob_id_val = (await client.post("/api/auth/login", json={
         "email": "bob@example.com", "password": "CorrectHorse9"
     })).json()["user"]["id"]
 
@@ -123,7 +123,7 @@ async def test_feed_contains_post_from_followed_user(client, storage):
 async def test_feed_does_not_contain_post_after_unfollow(client, storage):
     alice = await _signup_token(client, "alice@example.com")
     bob = await _signup_token(client, "bob@example.com")
-    bob_id_val = (await client.post("/auth/login", json={
+    bob_id_val = (await client.post("/api/auth/login", json={
         "email": "bob@example.com", "password": "CorrectHorse9"
     })).json()["user"]["id"]
 
@@ -157,7 +157,7 @@ async def test_feed_requires_auth(client):
 async def test_feed_cursor_pagination(client, storage):
     alice = await _signup_token(client, "alice@example.com")
     bob = await _signup_token(client, "bob@example.com")
-    bob_id_val = (await client.post("/auth/login", json={
+    bob_id_val = (await client.post("/api/auth/login", json={
         "email": "bob@example.com", "password": "CorrectHorse9"
     })).json()["user"]["id"]
 
@@ -196,7 +196,7 @@ async def test_feed_cursor_pagination(client, storage):
 async def test_feed_hydrates_attachment_urls(client, storage):
     alice = await _signup_token(client, "alice@example.com")
     bob = await _signup_token(client, "bob@example.com")
-    bob_id_val = (await client.post("/auth/login", json={
+    bob_id_val = (await client.post("/api/auth/login", json={
         "email": "bob@example.com", "password": "CorrectHorse9"
     })).json()["user"]["id"]
 
@@ -234,7 +234,7 @@ async def test_post_with_attachment_does_not_appear_in_follower_feed_without_att
     """Test the cache-miss fallback: feed reads from Postgres timeline_entries."""
     alice = await _signup_token(client, "alice@example.com")
     bob = await _signup_token(client, "bob@example.com")
-    bob_id_val = (await client.post("/auth/login", json={
+    bob_id_val = (await client.post("/api/auth/login", json={
         "email": "bob@example.com", "password": "CorrectHorse9"
     })).json()["user"]["id"]
 

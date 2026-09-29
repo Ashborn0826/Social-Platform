@@ -3,7 +3,7 @@ import pytest
 
 async def _signup_and_token(client, email: str = "alice@example.com", password: str = "CorrectHorse9") -> str:
     r = await client.post(
-        "/auth/signup",
+        "/api/auth/signup",
         json={"email": email, "password": password, "display_name": "Alice"},
     )
     return r.json()["access_token"]
@@ -94,7 +94,7 @@ async def test_get_post_unknown_returns_404(client):
 async def test_list_user_posts_empty(client):
     token = await _signup_and_token(client)
     me = await client.post(
-        "/auth/login",
+        "/api/auth/login",
         json={"email": "alice@example.com", "password": "CorrectHorse9"},
     )
     user_id = me.json()["user"]["id"]
@@ -112,7 +112,7 @@ async def test_list_user_posts_returns_in_desc_order(client):
             headers=_auth(token),
         )
     me = await client.post(
-        "/auth/login",
+        "/api/auth/login",
         json={"email": "alice@example.com", "password": "CorrectHorse9"},
     )
     user_id = me.json()["user"]["id"]
@@ -134,7 +134,7 @@ async def test_list_user_posts_pagination_no_overlap(client):
             headers=_auth(token),
         )
     me = await client.post(
-        "/auth/login",
+        "/api/auth/login",
         json={"email": "alice@example.com", "password": "CorrectHorse9"},
     )
     user_id = me.json()["user"]["id"]
@@ -164,7 +164,7 @@ async def test_list_user_posts_last_page_has_null_cursor(client):
             headers=_auth(token),
         )
     me = await client.post(
-        "/auth/login",
+        "/api/auth/login",
         json={"email": "alice@example.com", "password": "CorrectHorse9"},
     )
     user_id = me.json()["user"]["id"]

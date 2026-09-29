@@ -14,7 +14,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from redis.asyncio import Redis
 
-from app.api import auth, chats, feed, posts, uploads
+from app.api import auth, chats, feed, posts, uploads, users
 from app.cache.redis_client import get_redis
 from app.config import settings
 from app.realtime.subscriber import run_subscriber
@@ -84,6 +84,7 @@ def create_app() -> FastAPI:
         return {"status": "ok"}
 
     app.include_router(auth.router)
+    app.include_router(users.router)
     app.include_router(chats.router)
     app.include_router(feed.router)
     app.include_router(posts.router)

@@ -12,7 +12,7 @@ from app.config import settings
 
 async def _signup_token(client, email="alice@example.com") -> str:
     r = await client.post(
-        "/auth/signup",
+        "/api/auth/signup",
         json={"email": email, "password": "CorrectHorse9", "display_name": "Alice"},
     )
     return r.json()["access_token"]

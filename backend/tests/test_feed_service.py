@@ -42,13 +42,16 @@ async def test_fan_out_inserts_for_all_followers(session, redis_client):
 
     service = FeedService(session, redis_client)
     n = await service.fan_out_post(post_id=post.id, author_id=bob.id)
-    assert n == 2  # alice + carol
+    # 2 followers (alice + carol) + bob himself (own posts go into own feed)
+    assert n == 3
 
-    # Redis cache populated
+    # Redis cache populated for all three
     alice_feed = await redis_client.zrange(f"feed:{alice.id}", 0, -1)
     carol_feed = await redis_client.zrange(f"feed:{carol.id}", 0, -1)
+    bob_feed = await redis_client.zrange(f"feed:{bob.id}", 0, -1)
     assert int(alice_feed[0]) == post.id
     assert int(carol_feed[0]) == post.id
+    assert int(bob_feed[0]) == post.id
 
     # Postgres durable copy
     timeline = await TimelineRepository(session).list_post_ids_for_user(alice.id, limit=10)
@@ -63,11 +66,15 @@ async def test_fan_out_with_no_followers_is_noop(session, redis_client):
 
     service = FeedService(session, redis_client)
     n = await service.fan_out_post(post_id=post.id, author_id=bob.id)
-    assert n == 0
+    # Bob himself still gets the post (so they see their own posts in feed)
+    assert n == 1
 
-    # No Redis keys created
+    # Redis: bob's own feed has the post
+    bob_feed = await redis_client.zrange(f"feed:{bob.id}", 0, -1)
+    assert int(bob_feed[0]) == post.id
+    # No other keys
     keys = await redis_client.keys("feed:*")
-    assert keys == []
+    assert len(keys) == 1
 
 
 async def test_get_post_ids_uses_redis_when_present(session, redis_client):

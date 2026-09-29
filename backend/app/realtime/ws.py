@@ -51,8 +51,10 @@ async def chat_websocket(
 
     redis: Redis = websocket.app.state.redis
 
-    # 2. Register connection
+    # 2. Register connection + mark online (Redis key with 60s TTL, refreshed per msg)
+    redis_client: Redis = websocket.app.state.redis
     await manager.connect(websocket, user_id)
+    await redis_client.set(f"online:{user_id}", "1", ex=60)
     await websocket.send_json({"type": "ready"})
     logger.info("WS connected: user=%s total_connections=%d", user_id, manager.total_connections())
 
@@ -60,11 +62,19 @@ async def chat_websocket(
     try:
         while True:
             data = await websocket.receive_json()
-            await _handle_message(data, user_id, redis)
+            await _handle_message(data, user_id, redis_client)
+            # Refresh online TTL so the user stays "online" while connected
+            await redis_client.expire(f"online:{user_id}", 60)
     except WebSocketDisconnect:
         logger.info("WS disconnected: user=%s", user_id)
     finally:
         manager.disconnect(websocket, user_id)
+        # If this was the user's last local connection, mark them offline.
+        if manager.user_count(user_id) == 0:
+            try:
+                await redis_client.delete(f"online:{user_id}")
+            except Exception:
+                pass
 
 
 async def _handle_message(data: dict, sender_id: int, redis: Redis) -> None:

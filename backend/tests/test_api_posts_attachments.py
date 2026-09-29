@@ -5,7 +5,7 @@ import pytest
 
 async def _signup_token(client, email="alice@example.com") -> str:
     r = await client.post(
-        "/auth/signup",
+        "/api/auth/signup",
         json={"email": email, "password": "CorrectHorse9", "display_name": "Alice"},
     )
     return r.json()["access_token"]
@@ -117,7 +117,7 @@ async def test_create_post_dedupes_attachment_ids(client, storage):
     from app.db.models import PostAttachment
 
     me = await client.post(
-        "/auth/login",
+        "/api/auth/login",
         json={"email": "alice@example.com", "password": "CorrectHorse9"},
     )
     user_id = me.json()["user"]["id"]

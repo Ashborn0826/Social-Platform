@@ -38,23 +38,26 @@ class FeedService:
     async def fan_out_post(self, post_id: int, author_id: int) -> int:
         """Append post_id to every follower's timeline (Redis + Postgres).
 
-        Returns the number of followers the post was fanned out to.
+        Includes the author in the fan-out so their own posts appear in their
+        own feed without requiring self-follow (which the API rejects).
+
+        Returns the number of users the post was fanned out to.
         """
         follower_ids = await FollowRepository(self.session).list_follower_ids_of(author_id)
-        if not follower_ids:
-            return 0
+        # Always include the author so they see their own posts in their feed.
+        recipients = list(follower_ids) + [author_id]
 
         # Postgres durable copy
-        await TimelineRepository(self.session).insert_many(follower_ids, post_id)
+        await TimelineRepository(self.session).insert_many(recipients, post_id)
 
-        # Redis cache: ZADD into each follower's feed
+        # Redis cache: ZADD into each recipient's feed
         pipe = self.redis.pipeline()
-        for fid in follower_ids:
+        for fid in recipients:
             pipe.zadd(FEED_KEY.format(user_id=fid), {str(post_id): float(post_id)})
         await pipe.execute()
 
         await self.session.commit()
-        return len(follower_ids)
+        return len(recipients)
 
     async def get_post_ids(
         self, user_id: int, limit: int, before: int | None = None

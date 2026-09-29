@@ -4,7 +4,7 @@ import pytest
 
 async def _signup(client, email: str, password: str = "CorrectHorse9") -> str:
     r = await client.post(
-        "/auth/signup",
+        "/api/auth/signup",
         json={"email": email, "password": password, "display_name": email.split("@")[0]},
     )
     return r.json()["access_token"]
@@ -16,7 +16,7 @@ def _auth(token: str) -> dict[str, str]:
 
 async def _user_id(client, token: str, email: str) -> int:
     me = await client.post(
-        "/auth/login",
+        "/api/auth/login",
         json={"email": email, "password": "CorrectHorse9"},
     )
     return me.json()["user"]["id"]

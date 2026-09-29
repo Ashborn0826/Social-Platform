@@ -26,6 +26,16 @@ class UserResponse(BaseModel):
     created_at: datetime
 
 
+class UserSummary(BaseModel):
+    id: int
+    display_name: str
+    is_online: bool = False
+
+
+class UserListResponse(BaseModel):
+    users: list[UserSummary]
+
+
 class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str

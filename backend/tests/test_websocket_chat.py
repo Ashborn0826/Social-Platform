@@ -11,7 +11,7 @@ import pytest
 
 def _signup_sync(client, email: str, password: str = "CorrectHorse9") -> str:
     r = client.post(
-        "/auth/signup",
+        "/api/auth/signup",
         json={"email": email, "password": password, "display_name": email.split("@")[0]},
     )
     return r.json()["access_token"]
@@ -19,7 +19,7 @@ def _signup_sync(client, email: str, password: str = "CorrectHorse9") -> str:
 
 def _user_id_sync(client, token: str, email: str) -> int:
     me = client.post(
-        "/auth/login",
+        "/api/auth/login",
         json={"email": email, "password": "CorrectHorse9"},
     )
     return me.json()["user"]["id"]
@@ -150,7 +150,7 @@ def test_websocket_two_clients_same_user_get_message_twice(sync_client):
     bob_id = _user_id_sync(sync_client, alice_token, "bob@example.com")
 
     bob_token = sync_client.post(
-        "/auth/login",
+        "/api/auth/login",
         json={"email": "bob@example.com", "password": "CorrectHorse9"},
     ).json()["access_token"]
 
