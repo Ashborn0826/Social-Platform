@@ -25,10 +25,7 @@ export default function App() {
               <Routes>
                 <Route path="/" element={<Navigate to="/feed" replace />} />
                 <Route path="/feed" element={<FeedPage />} />
-                <Route
-                  path="/chats"
-                  element={<Navigate to="/chats" replace />}
-                />
+                <Route path="/chats" element={<ChatsPage />} />
                 <Route path="/chats/:chatId" element={<ChatsPage />} />
                 <Route path="/users/:userId" element={<ProfilePage />} />
                 <Route path="/upload" element={<UploadPage />} />
