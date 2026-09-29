@@ -132,6 +132,32 @@ class AttachmentRepository:
         att.completed_at = datetime.now(timezone.utc)
         await self.session.commit()
 
+    async def mark_processing(self, attachment_id: int) -> None:
+        att = await self.get_by_id(attachment_id)
+        if att is None:
+            return
+        att.status = "processing"
+        await self.session.commit()
+
+    async def mark_failed(self, attachment_id: int) -> None:
+        att = await self.get_by_id(attachment_id)
+        if att is None:
+            return
+        att.status = "failed"
+        await self.session.commit()
+
+    async def update_thumbnail(self, attachment_id: int, thumbnail_key: str) -> None:
+        att = await self.get_by_id(attachment_id)
+        if att is None:
+            return
+        att.thumbnail_key = thumbnail_key
+        # Mark the attachment as ready again after successful thumbnail processing.
+        # mark_processing set it to 'processing' before the work; we restore 'ready'
+        # here because the attachment is fully ready (original + thumbnail both
+        # in storage).
+        att.status = "ready"
+        await self.session.commit()
+
 
 class PostAttachmentRepository:
     def __init__(self, session: AsyncSession):

@@ -19,9 +19,11 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.deps import current_user
+from app.cache.redis_client import get_redis
 from app.db.models import User
 from app.db.repository import AttachmentRepository, PostAttachmentRepository
 from app.db.session import get_session
@@ -97,6 +99,7 @@ async def request_upload(
 async def complete_upload(
     attachment_id: int,
     session: AsyncSession = Depends(get_session),
+    redis: Redis = Depends(get_redis),
     user: User = Depends(current_user),
     storage: ObjectStorage = Depends(get_storage),
 ) -> CompleteUploadResponse:
@@ -114,6 +117,20 @@ async def complete_upload(
         raise HTTPException(status_code=409, detail="object_empty") from None
 
     await AttachmentRepository(session).mark_ready(attachment_id)
+
+    # Enqueue for thumbnail processing. Idempotency: skip if
+    #   - already has a thumbnail_key (already processed), OR
+    #   - content_type isn't image/* (videos stay thumbnail-less), OR
+    #   - status is 'processing' (worker is on it)
+    if (
+        att.thumbnail_key is None
+        and att.content_type.startswith("image/")
+        and att.status != "processing"
+    ):
+        from app.media_processing.queue import enqueue
+
+        await enqueue(redis, attachment_id)
+
     return CompleteUploadResponse(attachment_id=attachment_id, status="ready")
 
 

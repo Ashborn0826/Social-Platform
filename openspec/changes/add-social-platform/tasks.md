@@ -50,14 +50,14 @@
 
 ## 5. Phase 5 — Background media processing worker (thumbnails)
 
-- [ ] 5.1 Verify Pillow is installed (from Phase 2 pyproject) and verify `python -c "from PIL import Image; print(Image.__version__)"`
-- [ ] 5.2 Implement `backend/app/media_processing/thumbnail.py` with `generate_thumbnail(source_bytes, max_width=400) -> bytes` using Pillow resize with aspect ratio preserved, JPEG output and verify unit tests with a small fixture image
-- [ ] 5.3 Implement `backend/app/media_processing/queue.py` with `enqueue(redis, attachment_id)`, `dequeue(redis, timeout=1.0)`, `push_to_dlq(...)` (carry over from P1's click pipeline pattern)
-- [ ] 5.4 Implement `backend/app/media_processing/process.py` with `process_attachment(redis, attachment_id)` that (a) updates status='processing', (b) fetches original bytes from storage, (c) checks content_type is image/*, (d) generates thumbnail, (e) uploads to storage as `{key}.thumb`, (f) updates status='ready' + thumbnail_key, with retry+DLQ on failure
-- [ ] 5.5 Wire up: extend `POST /api/uploads/{id}/complete` to LPUSH to `media:processing` after the storage verification, AND add idempotency (don't re-enqueue if already in `processing` or `ready` with thumbnail_key set)
-- [ ] 5.6 Add `python -m app.media_processing.worker` entry-point that runs the BRPOP loop with graceful shutdown (carry over from P1's `app/__main__.py` pattern); verify it boots in a test
-- [ ] 5.7 Update `app/__main__.py` to dispatch: if env var `WORKER_ROLE=clicks` → run click worker (P1), else → run media-processing worker (P2); or use two separate entry points
-- [ ] 5.8 Phase 5 verification: `pytest -q` all green, end-to-end test "upload small JPEG → complete → wait → attachment.thumbnail_key is set"; write `notes/phase-5-explanation.md` AND `notes/phase-5-teaching.md` (zero-knowledge tutorial covering async processing, retry with exponential backoff, idempotency, status state machine, why separate workers)
+- [x] 5.1 Verify Pillow is installed (from Phase 2 pyproject) and verify `python -c "from PIL import Image; print(Image.__version__)"`
+- [x] 5.2 Implement `backend/app/media_processing/thumbnail.py` with `generate_thumbnail(source_bytes, max_width=400) -> bytes` using Pillow resize with aspect ratio preserved, JPEG output and verify unit tests with a small fixture image
+- [x] 5.3 Implement `backend/app/media_processing/queue.py` with `enqueue(redis, attachment_id)`, `dequeue(redis, timeout=1.0)`, `push_to_dlq(...)` (carry over from P1's click pipeline pattern)
+- [x] 5.4 Implement `backend/app/media_processing/process.py` with `process_attachment(redis, attachment_id)` that (a) updates status='processing', (b) fetches original bytes from storage, (c) checks content_type is image/*, (d) generates thumbnail, (e) uploads to storage as `{key}.thumb`, (f) updates status='ready' + thumbnail_key, with retry+DLQ on failure
+- [x] 5.5 Wire up: extend `POST /api/uploads/{id}/complete` to LPUSH to `media:processing` after the storage verification, AND add idempotency (don't re-enqueue if already in `processing` or `ready` with thumbnail_key set)
+- [x] 5.6 Add `python -m app.media_processing.worker` entry-point that runs the BRPOP loop with graceful shutdown (carry over from P1's `app/__main__.py` pattern); verify it boots in a test
+- [x] 5.7 Update `app/__main__.py` to dispatch: if env var `WORKER_ROLE=clicks` → run click worker (P1), else → run media-processing worker (P2); or use two separate entry points
+- [x] 5.8 Phase 5 verification: `pytest -q` all green, end-to-end test "upload small JPEG → complete → wait → attachment.thumbnail_key is set"; write `notes/phase-5-explanation.md` AND `notes/phase-5-teaching.md` (zero-knowledge tutorial covering async processing, retry with exponential backoff, idempotency, status state machine, why separate workers)
 
 ## 6. Phase 6 — Verify + archive + push
 

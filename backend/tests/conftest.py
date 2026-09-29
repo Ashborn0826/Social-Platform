@@ -113,6 +113,20 @@ async def session(db_setup):
         yield session
 
 
+@pytest_asyncio.fixture
+async def fresh_session(db_setup):
+    """A separate session for verification reads (bypasses the test's identity map).
+
+    Use this when an action under test commits via a different session (e.g.,
+    AsyncSessionLocal inside process_attachment) — the test's session has
+    the entity cached with stale fields, and `expire_all()` triggers lazy
+    reloads that conflict with the async greenlet.
+    """
+    SessionLocal = async_sessionmaker(db_setup, expire_on_commit=False)
+    async with SessionLocal() as s:
+        yield s
+
+
 @pytest.fixture
 def sync_client(app):
     """Sync TestClient for WebSocket tests.
